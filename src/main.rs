@@ -14,17 +14,16 @@ use std::{
 use anyhow::{Context, Result};
 use reqwest::Url;
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     // ファイルのダウンロードURLを入力してもらう。
     let file_url = input_url().context("不正なURLです。")?;
     // AlpacaHackのディレクトリ名を取得する。
     let alpacahack_directory = get_alpacahack_directory()?;
 
-    let problem_dir = setup_problem_project(&file_url, &alpacahack_directory).await?;
+    let challenge_dir = setup_challenge_project(&file_url, &alpacahack_directory)?;
 
     // VSCodeでディレクトリを開く。
-    open_vscode(&problem_dir).context("VSCodeでディレクトリを開けませんでした。")?;
+    open_vscode(&challenge_dir).context("VSCodeでディレクトリを開けませんでした。")?;
     println!("VSCodeでディレクトリを開きました。");
 
     Ok(())
@@ -42,16 +41,17 @@ async fn main() -> Result<()> {
 ///
 /// # 返り値
 /// 作成した問題プロジェクトのディレクトリパス。
-async fn setup_problem_project(file_url: &Url, alpacahack_directory: &Path) -> Result<PathBuf> {
+fn setup_challenge_project(file_url: &Url, alpacahack_directory: &Path) -> Result<PathBuf> {
     // 問題情報を取得する。
-    let problem_info = fetch::fetch_problem_data(file_url).await?;
+    let challenge_info = fetch::fetch_challenge_data(file_url)?;
     println!("問題情報を取得しました");
+    println!("{:?}", challenge_info);
 
     // 問題プロジェクトを作成する。
-    let problem_dir = project::create_project(alpacahack_directory, problem_info)?;
+    let challenge_dir = project::create_project(alpacahack_directory, challenge_info)?;
     println!("問題プロジェクトを作成しました。");
 
-    Ok(problem_dir)
+    Ok(challenge_dir)
 }
 
 /// URLを入力してもらう。
@@ -94,9 +94,9 @@ fn get_alpacahack_directory() -> Result<PathBuf> {
 }
 
 /// VSCodeで問題ディレクトリを開く。
-fn open_vscode(problem_dir: &Path) -> Result<()> {
+fn open_vscode(challenge_dir: &Path) -> Result<()> {
     process::Command::new("code")
-        .arg(problem_dir)
+        .arg(challenge_dir)
         .spawn()?
         .wait()?;
     Ok(())
@@ -113,14 +113,14 @@ mod daily_alpacahack_test {
     }
 
     /// 問題名とファイル名が一致しているパターン
-    #[tokio::test]
-    async fn test_emojify_matching() {
-        let problem_url = Url::parse("https://alpacahack.com/daily/challenges/emojify").unwrap();
+    #[test]
+    fn test_emojify_matching() {
+        let challenge_url = Url::parse("https://alpacahack.com/daily/challenges/emojify").unwrap();
         let _file_url = Url::parse("https://alpacahack-prod.s3.ap-northeast-1.amazonaws.com/5bad030b-a894-4111-900d-43332caf6bf6/emojify.tar.gz").unwrap();
 
         let dir = tempdir().unwrap();
 
-        setup_problem_project(&problem_url, dir.path()).await.unwrap();
+        setup_challenge_project(&challenge_url, dir.path()).unwrap();
 
         let expected = [
             "emojify/emojify/backend",
@@ -149,7 +149,7 @@ mod daily_alpacahack_test {
     #[test]
     #[ignore]
     fn test_a_fact_of_ctf_mismatch() {
-        let problem_url = "https://alpacahack.com/daily/challenges/a-fact-of-ctf";
+        let challenge_url = "https://alpacahack.com/daily/challenges/a-fact-of-ctf";
         let file_url = "https://alpacahack-prod.s3.ap-northeast-1.amazonaws.com/0a2e166c-fe68-4617-83d2-1ff98a4e5812/a-fact-of-CTF.tar.gz";
     }
 
@@ -157,7 +157,7 @@ mod daily_alpacahack_test {
     #[test]
     #[ignore]
     fn test_non_tar_file() {
-        let problem_url = "https://alpacahack.com/daily/challenges/read-assembly";
+        let challenge_url = "https://alpacahack.com/daily/challenges/read-assembly";
         let file_url = "https://alpacahack-prod.s3.ap-northeast-1.amazonaws.com/d8a7fbf5-1a2f-4398-ab06-bc1422cf33c6/asm.txt";
     }
 
@@ -165,6 +165,6 @@ mod daily_alpacahack_test {
     #[test]
     #[ignore]
     fn test_no_file() {
-        let problem_url = "https://alpacahack.com/daily/challenges/alpacahack-2100";
+        let challenge_url = "https://alpacahack.com/daily/challenges/alpacahack-2100";
     }
 }

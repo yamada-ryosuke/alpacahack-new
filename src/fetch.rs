@@ -1,32 +1,86 @@
 use anyhow::Result;
 use reqwest::Url;
 
-use crate::challenge_info::{ChallengeData, ChallengeInfo};
+use crate::challenge_info::{ChallengeData, ChallengeInfo, ChallengeMeta};
 
-/// URLからデータを取得する。
-pub async fn fetch_problem_data(file_url: &Url) -> Result<ChallengeInfo> {
-    let filename = get_filename(file_url)?;
-    let file_data = download(file_url).await?;
-    Ok(ChallengeInfo {
-        problem_name_with_kebab: filename.clone(),
-        data: ChallengeData {
-            name: filename,
-            data: file_data,
-        },
-    })
+/// URLを基に問題に関するデータを取得する。
+pub fn fetch_challenge_data(challenge_url: &Url) -> Result<ChallengeInfo> {
+    let (metadata, file_url) = fetch_challenge_meta(challenge_url)?;
+    match file_url {
+        None => Ok(ChallengeInfo {
+            meta: metadata,
+            data: None,
+        }),
+        Some(file_url) => {
+            let filename = get_filename(&file_url)?;
+            let file_data = download_file(&file_url)?;
+            Ok(ChallengeInfo {
+                meta: metadata,
+                data: Some(ChallengeData {
+                    url: file_url,
+                    name: filename,
+                    data: file_data,
+                }),
+            })
+        }
+    }
+}
+
+///
+fn fetch_challenge_meta(challenge_url: &Url) -> Result<(ChallengeMeta, Option<Url>)> {
+    // challenge_urlからデータを取得してパースする
+    let document = reqwest::blocking::get(challenge_url.as_str())?.text()?;
+    let document = scraper::Html::parse_document(&document);
+
+    // // セレクタを作成する
+    // let name_with_space_selector = scraper::Selector::parse(
+    //     "body > div.MuiBox-root.css-17uaq2i > div > main > div:nth-child(2) > h1",
+    // )
+    // .unwrap();
+    let file_url_selector = scraper::Selector::parse("body > div.MuiBox-root.css-17uaq2i > div > main > div.MuiBox-root.css-79elbk > article > div.MuiStack-root.css-1821gv5 > div > a").unwrap();
+
+    // // データを取得する
+    // let name_with_space = document
+    //     .select(&name_with_space_selector)
+    //     .next()
+    //     .unwrap()
+    //     .inner_html();
+    let file_url = document
+        .select(&file_url_selector)
+        .next()
+        .unwrap()
+        .attr("href")
+        .map(|s| Url::parse(s).unwrap());
+
+    let name_with_kebab = get_name_with_kebab(challenge_url)?;
+    Ok((ChallengeMeta {
+        url: challenge_url.clone(),
+        // name_with_space: "".to_string(),
+        name_with_kebab,
+    }, file_url))
 }
 
 /// ファイルをダウンロードする。
-async fn download(url: &Url) -> Result<bytes::Bytes> {
-    Ok(reqwest::get(url.as_str()).await?.bytes().await?)
+fn download_file(file_url: &Url) -> Result<bytes::Bytes> {
+    Ok(reqwest::blocking::get(file_url.as_str())?.bytes()?)
 }
 
 /// URLからファイル名を取得する。
-fn get_filename(url: &Url) -> Result<String> {
-    let filename = url
+fn get_filename(file_url: &Url) -> Result<String> {
+    let filename = file_url
         .path_segments()
         .ok_or(anyhow::anyhow!("URLのパスがありません。"))?
         .next_back()
         .ok_or(anyhow::anyhow!("URLのパスが空です。"))?;
     Ok(filename.to_owned())
+}
+
+/// URLからkebab-caseの問題名を取得する。
+fn get_name_with_kebab(challenge_url: &Url) -> Result<String> {
+    let challenge_name = challenge_url
+        .path_segments()
+        .ok_or(anyhow::anyhow!("URLのパスがありません。"))?
+        .next_back()
+        .ok_or(anyhow::anyhow!("URLのパスが空です。"))?;
+    Ok(challenge_name.to_owned())
 }

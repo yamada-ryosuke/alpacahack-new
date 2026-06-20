@@ -23,14 +23,16 @@ pub(crate) fn create_project(
     alpacahack_dir: &Path,
     challenge_info: ChallengeInfo,
 ) -> Result<PathBuf> {
-    let challenge_dir = create_directory(alpacahack_dir, &challenge_info.problem_name_with_kebab)
+    let challenge_dir = create_directory(alpacahack_dir, &challenge_info.meta.name_with_kebab)
         .context("問題ディレクトリの作成に失敗しました。")?;
     println!(
         "問題ディレクトリを作成しました: {}",
         challenge_dir.display()
     );
 
-    expand_file(&challenge_dir, challenge_info.data).context("ファイルの展開に失敗しました。")?;
+    if let Some(data) = challenge_info.data {
+        expand_file(&challenge_dir, data).context("ファイルの展開に失敗しました。")?;
+    }
     println!("ファイルの展開が完了しました。");
 
     // 問題ディレクトリにmemo.mdを作成する。
