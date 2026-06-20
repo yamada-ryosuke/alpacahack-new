@@ -1,7 +1,7 @@
-/// 問題ページから問題の情報を取得する機能のモジュール
-mod fetch;
 /// 問題の情報を持つための構造体
 mod challenge_info;
+/// 問題ページから問題の情報を取得する機能のモジュール
+mod fetch;
 /// 問題プロジェクトを作成する機能のモジュール
 mod project;
 
@@ -122,49 +122,100 @@ mod daily_alpacahack_test {
 
         setup_challenge_project(&challenge_url, dir.path()).unwrap();
 
-        let expected = [
-            "emojify/backend",
-            "emojify/backend/index.js",
-            "emojify/backend/package-lock.json",
-            "emojify/backend/package.json",
-            "emojify/frontend",
-            "emojify/frontend/index.html",
-            "emojify/frontend/index.js",
-            "emojify/frontend/package-lock.json",
-            "emojify/frontend/package.json",
-            "emojify/secret",
-            "emojify/secret/index.js",
-            "emojify/secret/package-lock.json",
-            "emojify/secret/package.json",
-            "emojify/compose.yaml",
-            "emojify/Dockerfile",
-            "memo.md",
+        // プロジェクトディレクトリがある
+        assert_exists(&dir.path(), "emojify");
+
+        // プロジェクトディレクトリの中にmemo.mdとダウンロードしたディレクトリがある。
+        let project_dir = dir.path().join("emojify");
+        assert_exists(&project_dir, "memo.md");
+        assert_exists(&project_dir, "emojify");
+
+        // ダウンロードしたファイルの中身がある
+        let downloaded_dir = project_dir.join("emojify");
+        let expected_files = [
+            "backend",
+            "backend/index.js",
+            "backend/package-lock.json",
+            "backend/package.json",
+            "frontend",
+            "frontend/index.html",
+            "frontend/index.js",
+            "frontend/package-lock.json",
+            "frontend/package.json",
+            "secret",
+            "secret/index.js",
+            "secret/package-lock.json",
+            "secret/package.json",
+            "compose.yaml",
+            "Dockerfile",
         ];
-        for rel in expected {
-            assert_exists(&dir.path().join("emojify"), rel);
+        for rel in expected_files {
+            assert_exists(&downloaded_dir, rel);
         }
     }
 
     /// 問題名とファイル名が一致していないパターン
     #[test]
-    #[ignore]
     fn test_a_fact_of_ctf_mismatch() {
-        let challenge_url = "https://alpacahack.com/daily/challenges/a-fact-of-ctf";
-        let file_url = "https://alpacahack-prod.s3.ap-northeast-1.amazonaws.com/0a2e166c-fe68-4617-83d2-1ff98a4e5812/a-fact-of-CTF.tar.gz";
+        let challenge_url =
+            Url::parse("https://alpacahack.com/daily/challenges/a-fact-of-ctf").unwrap();
+        let _file_url = Url::parse("https://alpacahack-prod.s3.ap-northeast-1.amazonaws.com/0a2e166c-fe68-4617-83d2-1ff98a4e5812/a-fact-of-CTF.tar.gz").unwrap();
+
+        let dir = tempdir().unwrap();
+
+        setup_challenge_project(&challenge_url, dir.path()).unwrap();
+
+        // プロジェクトディレクトリがある
+        assert_exists(&dir.path(), "a-fact-of-ctf");
+
+        // プロジェクトディレクトリの中にmemo.mdとダウンロードしたディレクトリがある。
+        let project_dir = dir.path().join("a-fact-of-ctf");
+        assert_exists(&project_dir, "memo.md");
+        assert_exists(&project_dir, "a-fact-of-CTF");
+
+        // ダウンロードしたファイルの中身がある
+        let downloaded_dir = project_dir.join("a-fact-of-CTF");
+        let expected_files = ["chall.py", "output.txt"];
+        for rel in expected_files {
+            assert_exists(&downloaded_dir, rel);
+        }
     }
 
     /// ファイルが.tar.gzでないパターン
     #[test]
-    #[ignore]
     fn test_non_tar_file() {
-        let challenge_url = "https://alpacahack.com/daily/challenges/read-assembly";
-        let file_url = "https://alpacahack-prod.s3.ap-northeast-1.amazonaws.com/d8a7fbf5-1a2f-4398-ab06-bc1422cf33c6/asm.txt";
+        let challenge_url =
+            Url::parse("https://alpacahack.com/daily/challenges/read-assembly").unwrap();
+        let _file_url = Url::parse("https://alpacahack-prod.s3.ap-northeast-1.amazonaws.com/d8a7fbf5-1a2f-4398-ab06-bc1422cf33c6/asm.txt").unwrap();
+
+        let dir = tempdir().unwrap();
+
+        setup_challenge_project(&challenge_url, dir.path()).unwrap();
+
+        // プロジェクトディレクトリがある
+        assert_exists(&dir.path(), "read-assembly");
+
+        // プロジェクトディレクトリの中にmemo.mdとダウンロードしたディレクトリがある。
+        let project_dir = dir.path().join("read-assembly");
+        assert_exists(&project_dir, "memo.md");
+        assert_exists(&project_dir, "asm.txt");
     }
 
     /// ファイルがないパターン
     #[test]
-    #[ignore]
     fn test_no_file() {
-        let challenge_url = "https://alpacahack.com/daily/challenges/alpacahack-2100";
+        let challenge_url =
+            Url::parse("https://alpacahack.com/daily/challenges/alpacahack-2100").unwrap();
+
+        let dir = tempdir().unwrap();
+
+        setup_challenge_project(&challenge_url, dir.path()).unwrap();
+
+        // プロジェクトディレクトリがある
+        assert_exists(&dir.path(), "alpacahack-2100");
+
+        // プロジェクトディレクトリの中にmemo.mdがある。
+        let project_dir = dir.path().join("alpacahack-2100");
+        assert_exists(&project_dir, "memo.md");
     }
 }

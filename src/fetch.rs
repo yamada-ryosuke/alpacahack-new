@@ -48,8 +48,7 @@ fn fetch_challenge_meta(challenge_url: &Url) -> Result<(ChallengeMeta, Option<Ur
     let file_url = document
         .select(&file_url_selector)
         .next()
-        .unwrap()
-        .attr("href")
+        .and_then(|elem|elem.attr("href"))
         .map(|s| Url::parse(s).unwrap());
 
     let name_with_kebab = get_name_with_kebab(challenge_url)?;
