@@ -1,6 +1,6 @@
 use chrono::NaiveDate;
 use reqwest::Url;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// 問題に関する情報
 #[derive(Debug)]
@@ -12,7 +12,7 @@ pub struct ChallengeInfo {
 }
 
 /// 問題に関する基本情報
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ChallengeMeta {
     /// 問題のURL
     pub url: Url,

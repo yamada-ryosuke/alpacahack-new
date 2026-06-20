@@ -103,12 +103,62 @@ fn open_vscode(challenge_dir: &Path) -> Result<()> {
 
 #[cfg(test)]
 mod daily_alpacahack_test {
+    use std::{fs, io::Read};
+
+    use crate::challenge_info::ChallengeMeta;
+
     use super::*;
+    use chrono::NaiveDate;
     use tempfile::tempdir;
 
-    /// rootディレクトリにrelが存在することを確認する
-    fn assert_exists(root: &Path, rel: &str) {
-        assert!(root.join(rel).exists(), "{} does not exist", rel)
+    // 期待されるディレクトリ構成を表す構造体
+    enum FsEntry {
+        File {
+            name: String,
+        },
+        Directory {
+            name: String,
+            children: Vec<FsEntry>,
+        },
+    }
+
+    /// ディレクトリ構成が正しいことを確かめる関数
+    fn assert_directory_structure(root: &Path, expected: &FsEntry) {
+        match expected {
+            FsEntry::File { name } => {
+                let path = root.join(name);
+                assert!(
+                    path.is_file(),
+                    "{}はファイルではありません。",
+                    path.display()
+                );
+            }
+            FsEntry::Directory { name, children } => {
+                let dir = root.join(name);
+                assert!(
+                    dir.is_dir(),
+                    "{}はディレクトリではありません。",
+                    dir.display()
+                );
+                for child in children {
+                    assert_directory_structure(&dir, child);
+                }
+            }
+        }
+    }
+
+    /// challenge.tomlの中身が正しいことのテスト
+    fn assert_challenge_toml(
+        root: &Path,
+        expected_challenge_toml: ChallengeMeta,
+    ) {
+        let mut challenge_toml = String::new();
+        fs::File::open(root.join(&expected_challenge_toml.project_name).join("challenge.toml"))
+            .unwrap()
+            .read_to_string(&mut challenge_toml)
+            .unwrap();
+        let challenge_toml = toml::from_str::<ChallengeMeta>(&challenge_toml).unwrap();
+        assert_eq!(challenge_toml, expected_challenge_toml);
     }
 
     /// 問題タイトルとファイル名が一致しているパターン
@@ -121,36 +171,87 @@ mod daily_alpacahack_test {
 
         setup_challenge_project(&challenge_url, dir.path()).unwrap();
 
-        // プロジェクトディレクトリがある
-        assert_exists(&dir.path(), "emojify");
+        use FsEntry::*;
+        let expected_directory = Directory {
+            name: "emojify".to_string(),
+            children: vec![
+                File {
+                    name: "note.md".to_string(),
+                },
+                File {
+                    name: "challenge.toml".to_string(),
+                },
+                Directory {
+                    name: "emojify".to_string(),
+                    children: vec![
+                        Directory {
+                            name: "backend".to_string(),
+                            children: vec![
+                                File {
+                                    name: "index.js".to_string(),
+                                },
+                                File {
+                                    name: "package-lock.json".to_string(),
+                                },
+                                File {
+                                    name: "package.json".to_string(),
+                                },
+                            ],
+                        },
+                        Directory {
+                            name: "frontend".to_string(),
+                            children: vec![
+                                File {
+                                    name: "index.js".to_string(),
+                                },
+                                File {
+                                    name: "index.html".to_string(),
+                                },
+                                File {
+                                    name: "package-lock.json".to_string(),
+                                },
+                                File {
+                                    name: "package.json".to_string(),
+                                },
+                            ],
+                        },
+                        Directory {
+                            name: "secret".to_string(),
+                            children: vec![
+                                File {
+                                    name: "index.js".to_string(),
+                                },
+                                File {
+                                    name: "package-lock.json".to_string(),
+                                },
+                                File {
+                                    name: "package.json".to_string(),
+                                },
+                            ],
+                        },
+                        File {
+                            name: "compose.yaml".to_string(),
+                        },
+                        File {
+                            name: "Dockerfile".to_string(),
+                        },
+                    ],
+                },
+            ],
+        };
 
-        // プロジェクトディレクトリの中にnote.mdとダウンロードしたディレクトリがある。
-        let project_dir = dir.path().join("emojify");
-        assert_exists(&project_dir, "note.md");
-        assert_exists(&project_dir, "emojify");
+        assert_directory_structure(dir.path(), &expected_directory);
 
-        // ダウンロードしたファイルの中身がある
-        let downloaded_dir = project_dir.join("emojify");
-        let expected_files = [
-            "backend",
-            "backend/index.js",
-            "backend/package-lock.json",
-            "backend/package.json",
-            "frontend",
-            "frontend/index.html",
-            "frontend/index.js",
-            "frontend/package-lock.json",
-            "frontend/package.json",
-            "secret",
-            "secret/index.js",
-            "secret/package-lock.json",
-            "secret/package.json",
-            "compose.yaml",
-            "Dockerfile",
-        ];
-        for rel in expected_files {
-            assert_exists(&downloaded_dir, rel);
-        }
+        // challenge.tomlの中身が正しいことのテスト
+        assert_challenge_toml(
+            dir.path(),
+            ChallengeMeta {
+                url: Url::parse("https://alpacahack.com/daily/challenges/emojify").unwrap(),
+                released_at: NaiveDate::from_ymd_opt(2025, 12, 3).unwrap(),
+                title: "Emojify".to_string(),
+                project_name: "emojify".to_string(),
+            },
+        );
     }
 
     /// 問題タイトルとファイル名が一致していないパターン
@@ -164,20 +265,41 @@ mod daily_alpacahack_test {
 
         setup_challenge_project(&challenge_url, dir.path()).unwrap();
 
-        // プロジェクトディレクトリがある
-        assert_exists(&dir.path(), "a-fact-of-ctf");
+        use FsEntry::*;
+        let expected_directory = Directory {
+            name: "a-fact-of-ctf".to_string(),
+            children: vec![
+                File {
+                    name: "note.md".to_string(),
+                },
+                File {
+                    name: "challenge.toml".to_string(),
+                },
+                Directory {
+                    name: "a-fact-of-CTF".to_string(),
+                    children: vec![
+                        File {
+                            name: "chall.py".to_string(),
+                        },
+                        File {
+                            name: "output.txt".to_string(),
+                        },
+                    ],
+                },
+            ],
+        };
+        assert_directory_structure(dir.path(), &expected_directory);
 
-        // プロジェクトディレクトリの中にnote.mdとダウンロードしたディレクトリがある。
-        let project_dir = dir.path().join("a-fact-of-ctf");
-        assert_exists(&project_dir, "note.md");
-        assert_exists(&project_dir, "a-fact-of-CTF");
-
-        // ダウンロードしたファイルの中身がある
-        let downloaded_dir = project_dir.join("a-fact-of-CTF");
-        let expected_files = ["chall.py", "output.txt"];
-        for rel in expected_files {
-            assert_exists(&downloaded_dir, rel);
-        }
+        // challenge.tomlの中身が正しいことのテスト
+        assert_challenge_toml(
+            dir.path(),
+            ChallengeMeta {
+                url: Url::parse("https://alpacahack.com/daily/challenges/a-fact-of-ctf").unwrap(),
+                released_at: NaiveDate::from_ymd_opt(2025, 12, 2).unwrap(),
+                title: "a fact of CTF".to_string(),
+                project_name: "a-fact-of-ctf".to_string(),
+            },
+        );
     }
 
     /// ファイルが.tar.gzでないパターン
@@ -191,13 +313,33 @@ mod daily_alpacahack_test {
 
         setup_challenge_project(&challenge_url, dir.path()).unwrap();
 
-        // プロジェクトディレクトリがある
-        assert_exists(&dir.path(), "read-assembly");
-
-        // プロジェクトディレクトリの中にnote.mdとダウンロードしたディレクトリがある。
-        let project_dir = dir.path().join("read-assembly");
-        assert_exists(&project_dir, "note.md");
-        assert_exists(&project_dir, "asm.txt");
+        use FsEntry::*;
+        let expected_directory = Directory {
+            name: "read-assembly".to_string(),
+            children: vec![
+                File {
+                    name: "note.md".to_string(),
+                },
+                File {
+                    name: "challenge.toml".to_string(),
+                },
+                File {
+                    name: "asm.txt".to_string(),
+                },
+            ],
+        };
+        assert_directory_structure(dir.path(), &expected_directory);
+        
+        // challenge.tomlの中身が正しいことのテスト
+        assert_challenge_toml(
+            dir.path(),
+            ChallengeMeta {
+                url: Url::parse("https://alpacahack.com/daily/challenges/read-assembly").unwrap(),
+                released_at: NaiveDate::from_ymd_opt(2025, 12, 10).unwrap(),
+                title: "Read Assembly".to_string(),
+                project_name: "read-assembly".to_string(),
+            },
+        );
     }
 
     /// ファイルがないパターン
@@ -210,11 +352,29 @@ mod daily_alpacahack_test {
 
         setup_challenge_project(&challenge_url, dir.path()).unwrap();
 
-        // プロジェクトディレクトリがある
-        assert_exists(&dir.path(), "alpacahack-2100");
-
-        // プロジェクトディレクトリの中にnote.mdがある。
-        let project_dir = dir.path().join("alpacahack-2100");
-        assert_exists(&project_dir, "note.md");
+        use FsEntry::*;
+        let expected_directory = Directory {
+            name: "alpacahack-2100".to_string(),
+            children: vec![
+                File {
+                    name: "note.md".to_string(),
+                },
+                File {
+                    name: "challenge.toml".to_string(),
+                },
+            ],
+        };
+        assert_directory_structure(dir.path(), &expected_directory);
+        
+        // challenge.tomlの中身が正しいことのテスト
+        assert_challenge_toml(
+            dir.path(),
+            ChallengeMeta {
+                url: Url::parse("https://alpacahack.com/daily/challenges/alpacahack-2100").unwrap(),
+                released_at: NaiveDate::from_ymd_opt(2025, 12, 1).unwrap(),
+                title: "AlpacaHack 2100".to_string(),
+                project_name: "alpacahack-2100".to_string(),
+            },
+        );
     }
 }
