@@ -111,21 +111,16 @@ mod daily_alpacahack_test {
     use chrono::NaiveDate;
     use tempfile::tempdir;
 
-    // 期待されるディレクトリ構成を表す構造体
+    /// 期待されるディレクトリ構成を表す構造体
     enum FsEntry {
-        File {
-            name: String,
-        },
-        Directory {
-            name: String,
-            children: Vec<FsEntry>,
-        },
+        File(String),
+        Directory(String, Vec<FsEntry>),
     }
 
     /// ディレクトリ構成が正しいことを確かめる関数
     fn assert_directory_structure(root: &Path, expected: &FsEntry) {
         match expected {
-            FsEntry::File { name } => {
+            FsEntry::File(name) => {
                 let path = root.join(name);
                 assert!(
                     path.is_file(),
@@ -133,7 +128,7 @@ mod daily_alpacahack_test {
                     path.display()
                 );
             }
-            FsEntry::Directory { name, children } => {
+            FsEntry::Directory(name, children) => {
                 let dir = root.join(name);
                 assert!(
                     dir.is_dir(),
@@ -148,15 +143,15 @@ mod daily_alpacahack_test {
     }
 
     /// challenge.tomlの中身が正しいことのテスト
-    fn assert_challenge_toml(
-        root: &Path,
-        expected_challenge_toml: ChallengeMeta,
-    ) {
+    fn assert_challenge_toml(root: &Path, expected_challenge_toml: ChallengeMeta) {
         let mut challenge_toml = String::new();
-        fs::File::open(root.join(&expected_challenge_toml.project_name).join("challenge.toml"))
-            .unwrap()
-            .read_to_string(&mut challenge_toml)
-            .unwrap();
+        fs::File::open(
+            root.join(&expected_challenge_toml.project_name)
+                .join("challenge.toml"),
+        )
+        .unwrap()
+        .read_to_string(&mut challenge_toml)
+        .unwrap();
         let challenge_toml = toml::from_str::<ChallengeMeta>(&challenge_toml).unwrap();
         assert_eq!(challenge_toml, expected_challenge_toml);
     }
@@ -165,80 +160,51 @@ mod daily_alpacahack_test {
     #[test]
     fn test_emojify_matching() {
         let challenge_url = Url::parse("https://alpacahack.com/daily/challenges/emojify").unwrap();
-        let _file_url = Url::parse("https://alpacahack-prod.s3.ap-northeast-1.amazonaws.com/5bad030b-a894-4111-900d-43332caf6bf6/emojify.tar.gz").unwrap();
 
         let dir = tempdir().unwrap();
 
         setup_challenge_project(&challenge_url, dir.path()).unwrap();
 
         use FsEntry::*;
-        let expected_directory = Directory {
-            name: "emojify".to_string(),
-            children: vec![
-                File {
-                    name: "note.md".to_string(),
-                },
-                File {
-                    name: "challenge.toml".to_string(),
-                },
-                Directory {
-                    name: "emojify".to_string(),
-                    children: vec![
-                        Directory {
-                            name: "backend".to_string(),
-                            children: vec![
-                                File {
-                                    name: "index.js".to_string(),
-                                },
-                                File {
-                                    name: "package-lock.json".to_string(),
-                                },
-                                File {
-                                    name: "package.json".to_string(),
-                                },
+        let expected_directory = Directory(
+            "emojify".into(),
+            vec![
+                File("note.md".into()),
+                File("challenge.toml".into()),
+                Directory(
+                    "emojify".into(),
+                    vec![
+                        Directory(
+                            "backend".into(),
+                            vec![
+                                File("index.js".into()),
+                                File("package-lock.json".into()),
+                                File("package.json".into()),
                             ],
-                        },
-                        Directory {
-                            name: "frontend".to_string(),
-                            children: vec![
-                                File {
-                                    name: "index.js".to_string(),
-                                },
-                                File {
-                                    name: "index.html".to_string(),
-                                },
-                                File {
-                                    name: "package-lock.json".to_string(),
-                                },
-                                File {
-                                    name: "package.json".to_string(),
-                                },
+                        ),
+                        Directory(
+                            "frontend".into(),
+                            vec![
+                                File("index.js".into()),
+                                File("index.html".into()),
+                                File("package-lock.json".into()),
+                                File("package.json".into()),
                             ],
-                        },
-                        Directory {
-                            name: "secret".to_string(),
-                            children: vec![
-                                File {
-                                    name: "index.js".to_string(),
-                                },
-                                File {
-                                    name: "package-lock.json".to_string(),
-                                },
-                                File {
-                                    name: "package.json".to_string(),
-                                },
+                        ),
+                        Directory(
+                            "secret".into(),
+                            vec![
+                                File("index.js".into()),
+                                File("package-lock.json".into()),
+                                File("package.json".into()),
                             ],
-                        },
-                        File {
-                            name: "compose.yaml".to_string(),
-                        },
-                        File {
-                            name: "Dockerfile".to_string(),
-                        },
+                        ),
+                        File("compose.yaml".into()),
+                        File("Dockerfile".into()),
                     ],
-                },
+                ),
             ],
-        };
+        );
 
         assert_directory_structure(dir.path(), &expected_directory);
 
@@ -246,10 +212,10 @@ mod daily_alpacahack_test {
         assert_challenge_toml(
             dir.path(),
             ChallengeMeta {
-                url: Url::parse("https://alpacahack.com/daily/challenges/emojify").unwrap(),
+                url: challenge_url,
                 released_at: NaiveDate::from_ymd_opt(2025, 12, 3).unwrap(),
-                title: "Emojify".to_string(),
-                project_name: "emojify".to_string(),
+                title: "Emojify".into(),
+                project_name: "emojify".into(),
             },
         );
     }
@@ -259,45 +225,33 @@ mod daily_alpacahack_test {
     fn test_a_fact_of_ctf_mismatch() {
         let challenge_url =
             Url::parse("https://alpacahack.com/daily/challenges/a-fact-of-ctf").unwrap();
-        let _file_url = Url::parse("https://alpacahack-prod.s3.ap-northeast-1.amazonaws.com/0a2e166c-fe68-4617-83d2-1ff98a4e5812/a-fact-of-CTF.tar.gz").unwrap();
 
         let dir = tempdir().unwrap();
 
         setup_challenge_project(&challenge_url, dir.path()).unwrap();
 
         use FsEntry::*;
-        let expected_directory = Directory {
-            name: "a-fact-of-ctf".to_string(),
-            children: vec![
-                File {
-                    name: "note.md".to_string(),
-                },
-                File {
-                    name: "challenge.toml".to_string(),
-                },
-                Directory {
-                    name: "a-fact-of-CTF".to_string(),
-                    children: vec![
-                        File {
-                            name: "chall.py".to_string(),
-                        },
-                        File {
-                            name: "output.txt".to_string(),
-                        },
-                    ],
-                },
+        let expected_directory = Directory(
+            "a-fact-of-ctf".into(),
+            vec![
+                File("note.md".into()),
+                File("challenge.toml".into()),
+                Directory(
+                    "a-fact-of-CTF".into(),
+                    vec![File("chall.py".into()), File("output.txt".into())],
+                ),
             ],
-        };
+        );
         assert_directory_structure(dir.path(), &expected_directory);
 
         // challenge.tomlの中身が正しいことのテスト
         assert_challenge_toml(
             dir.path(),
             ChallengeMeta {
-                url: Url::parse("https://alpacahack.com/daily/challenges/a-fact-of-ctf").unwrap(),
+                url: challenge_url,
                 released_at: NaiveDate::from_ymd_opt(2025, 12, 2).unwrap(),
-                title: "a fact of CTF".to_string(),
-                project_name: "a-fact-of-ctf".to_string(),
+                title: "a fact of CTF".into(),
+                project_name: "a-fact-of-ctf".into(),
             },
         );
     }
@@ -307,37 +261,30 @@ mod daily_alpacahack_test {
     fn test_non_tar_file() {
         let challenge_url =
             Url::parse("https://alpacahack.com/daily/challenges/read-assembly").unwrap();
-        let _file_url = Url::parse("https://alpacahack-prod.s3.ap-northeast-1.amazonaws.com/d8a7fbf5-1a2f-4398-ab06-bc1422cf33c6/asm.txt").unwrap();
 
         let dir = tempdir().unwrap();
 
         setup_challenge_project(&challenge_url, dir.path()).unwrap();
 
         use FsEntry::*;
-        let expected_directory = Directory {
-            name: "read-assembly".to_string(),
-            children: vec![
-                File {
-                    name: "note.md".to_string(),
-                },
-                File {
-                    name: "challenge.toml".to_string(),
-                },
-                File {
-                    name: "asm.txt".to_string(),
-                },
+        let expected_directory = Directory(
+            "read-assembly".into(),
+            vec![
+                File("note.md".into()),
+                File("challenge.toml".into()),
+                File("asm.txt".into()),
             ],
-        };
+        );
         assert_directory_structure(dir.path(), &expected_directory);
-        
+
         // challenge.tomlの中身が正しいことのテスト
         assert_challenge_toml(
             dir.path(),
             ChallengeMeta {
-                url: Url::parse("https://alpacahack.com/daily/challenges/read-assembly").unwrap(),
+                url: challenge_url,
                 released_at: NaiveDate::from_ymd_opt(2025, 12, 10).unwrap(),
-                title: "Read Assembly".to_string(),
-                project_name: "read-assembly".to_string(),
+                title: "Read Assembly".into(),
+                project_name: "read-assembly".into(),
             },
         );
     }
@@ -353,27 +300,20 @@ mod daily_alpacahack_test {
         setup_challenge_project(&challenge_url, dir.path()).unwrap();
 
         use FsEntry::*;
-        let expected_directory = Directory {
-            name: "alpacahack-2100".to_string(),
-            children: vec![
-                File {
-                    name: "note.md".to_string(),
-                },
-                File {
-                    name: "challenge.toml".to_string(),
-                },
-            ],
-        };
+        let expected_directory = Directory(
+            "alpacahack-2100".into(),
+            vec![File("note.md".into()), File("challenge.toml".into())],
+        );
         assert_directory_structure(dir.path(), &expected_directory);
-        
+
         // challenge.tomlの中身が正しいことのテスト
         assert_challenge_toml(
             dir.path(),
             ChallengeMeta {
-                url: Url::parse("https://alpacahack.com/daily/challenges/alpacahack-2100").unwrap(),
+                url: challenge_url,
                 released_at: NaiveDate::from_ymd_opt(2025, 12, 1).unwrap(),
-                title: "AlpacaHack 2100".to_string(),
-                project_name: "alpacahack-2100".to_string(),
+                title: "AlpacaHack 2100".into(),
+                project_name: "alpacahack-2100".into(),
             },
         );
     }

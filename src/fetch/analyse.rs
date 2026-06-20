@@ -6,6 +6,13 @@ use scraper::Html;
 use crate::challenge_info::ChallengeMeta;
 
 /// 問題ページを解析して、必要なデータを抽出する。
+///
+/// # 引数
+/// - challenge_url: 元の問題ページのURL
+/// - document: HTML文字列
+/// 
+/// # 返り値
+/// 返り値は ChallengeMeta とオプションのファイルURL。
 pub fn analyze_document(
     challenge_url: &Url,
     document: &str,
@@ -17,39 +24,39 @@ pub fn analyze_document(
         ChallengeMeta {
             url: challenge_url.clone(),
             released_at: get_date(&document)?,
-            title: get_name_with_space(&document)?,
-            project_name: get_name_with_kebab(challenge_url)?,
+            title: get_title(&document)?,
+            project_name: get_project_name(challenge_url)?,
         },
         get_file_url(&document)?,
     ))
 }
 
 /// 問題の正式名称を取得する。
-fn get_name_with_space(document: &Html) -> Result<String> {
-    // 親要素のセレクタを作成する。
-    let name_with_space_selector = scraper::Selector::parse("main > div > h1")
+///
+/// HTML の `main > div > h1` 要素からタイトル文字列を取り出す。
+fn get_title(document: &Html) -> Result<String> {
+    let title_selector = scraper::Selector::parse("main > div > h1")
         .map_err(|_| anyhow::anyhow!("問題タイトルのセレクタの作成に失敗しました"))?;
 
-    // 親要素を取得する
     let parent = document
-        .select(&name_with_space_selector)
+        .select(&title_selector)
         .next()
         .ok_or(anyhow::anyhow!(
             "問題タイトルのh1要素を取得できませんでした。"
         ))?;
-    // 名前を取得する
+
     Ok(parent.inner_html())
 }
 
 /// ファイルのURLを取得する
+///
+/// HTML の `main > div > article > div > div > a` から href 属性を解析する。
 fn get_file_url(document: &Html) -> Result<Option<Url>> {
-    // 親要素のセレクタを作成する
     let file_url_selector = scraper::Selector::parse("main > div > article > div > div > a")
         .map_err(|_| anyhow::anyhow!("ファイルのURLのセレクタの作成に失敗しました"))?;
 
-    // 親要素を取得する
     let parent = document.select(&file_url_selector).next();
-    // 親要素があればURLを取得して返す。なければURLなしと判断してNoneを返す。
+
     match parent {
         None => Ok(None),
         Some(parent) => {
@@ -62,11 +69,11 @@ fn get_file_url(document: &Html) -> Result<Option<Url>> {
 }
 
 /// 問題の日付を取得する
+///
+/// HTML の `main > div > p` 要素内の最終子要素を日付文字列として扱う。
 fn get_date(document: &Html) -> Result<NaiveDate> {
-    // 親要素のセレクタを作成する。
     let release_selector = scraper::Selector::parse("main > div > p").unwrap();
 
-    // 親要素を取得する。
     let parent = document
         .select(&release_selector)
         .next()
@@ -84,17 +91,59 @@ fn get_date(document: &Html) -> Result<NaiveDate> {
     convert_to_naive_date(&date_string)
 }
 
+/// 文字列を指定されたフォーマットでNaiveDateに変換する。
+/// 入力フォーマット: "%b %e, %Y" (例: "Jan  1, 2024")
 fn convert_to_naive_date(date_string: &str) -> Result<NaiveDate> {
     let date = NaiveDate::parse_from_str(date_string, "%b %e, %Y")?;
     Ok(date)
 }
 
-/// URLからkebab-caseの問題タイトルを取得する。
-fn get_name_with_kebab(challenge_url: &Url) -> Result<String> {
+/// URLからプロジェクト名に使うkebab-caseの問題タイトルを取得する。
+///
+/// challenge_url のパス末尾のセグメントをそのまま返す。
+fn get_project_name(challenge_url: &Url) -> Result<String> {
     let challenge_name = challenge_url
         .path_segments()
         .ok_or(anyhow::anyhow!("URLのパスがありません。"))?
+        .filter(|segment| !segment.is_empty())
         .next_back()
         .ok_or(anyhow::anyhow!("URLのパスが空です。"))?;
     Ok(challenge_name.to_owned())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 正しい形式の日付文字列をNaiveDateに変換できることを確認するテスト
+    #[test]
+    fn test_convert_to_naive_date_valid() {
+        let result = convert_to_naive_date("Jan  1, 2024");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), NaiveDate::from_ymd_opt(2024, 1, 1).unwrap());
+    }
+
+    /// 無効な形式の日付文字列はエラーになることを確認するテスト
+    #[test]
+    fn test_convert_to_naive_date_invalid_format() {
+        let result = convert_to_naive_date("2024-01-01");
+        assert!(result.is_err());
+    }
+
+    /// URLの末尾からプロジェクト名（kebab-case）を正しく抽出できることを確認するテスト
+    #[test]
+    fn test_get_project_name_valid_url() {
+        let url = Url::parse("https://alpacahack.com/daily/challenges/secret-table").unwrap();
+        let result = get_project_name(&url);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "secret-table");
+    }
+
+    /// URLのパスが空の場合はエラーになることを確認するテスト
+    #[test]
+    fn test_get_project_name_empty_path() {
+        let url = Url::parse("https://alpacahack.com").unwrap();
+        let result = get_project_name(&url);
+        assert!(result.is_err());
+    }
 }
