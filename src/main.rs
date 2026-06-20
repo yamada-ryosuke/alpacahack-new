@@ -1,5 +1,8 @@
+mod fetch;
+mod project;
+
 use std::{
-    fs::{self, File},
+    fs::File,
     io::{self, Write},
     path::{Path, PathBuf},
     process,
@@ -43,21 +46,21 @@ async fn main() -> Result<()> {
 /// ```
 async fn run(file_url: &Url, alpacahack_directory: &Path) -> Result<()> {
     // ファイルをダウンロードする
-    let downloaded_data = download(file_url)
+    let downloaded_data = fetch::download(file_url)
         .await
         .context("ファイルのダウンロードに失敗しました。")?;
     println!("ダウンロードが完了しました。");
 
     // URLからファイル名を取得する。
-    let downloaded_filename = get_filename(file_url).context("ファイル名の取得に失敗しました。")?;
+    let downloaded_filename = fetch::get_filename(file_url).context("ファイル名の取得に失敗しました。")?;
 
     // 問題ディレクトリを作成する。
-    let dir = create_directory(alpacahack_directory, &downloaded_filename)
+    let dir = project::create_directory(alpacahack_directory, &downloaded_filename)
         .context("問題ディレクトリの作成に失敗しました。")?;
     println!("問題ディレクトリを作成しました: {}", dir.display());
 
     // 問題ディレクトリの中にファイルを展開する。
-    expand_file(&dir, &downloaded_filename, &downloaded_data)
+    project::expand_file(&dir, &downloaded_filename, &downloaded_data)
         .context("ファイルの展開に失敗しました。")?;
     println!("ファイルの展開が完了しました。");
 
@@ -102,48 +105,6 @@ fn validate_domain(url: &str) -> Result<Url> {
     }
 }
 
-/// ファイルをダウンロードする。
-async fn download(url: &Url) -> Result<bytes::Bytes> {
-    Ok(reqwest::get(url.as_str()).await?.bytes().await?)
-}
-
-/// URLからファイル名を取得する。
-fn get_filename(url: &Url) -> Result<String> {
-    let filename = url
-        .path_segments()
-        .ok_or(anyhow::anyhow!("URLのパスがありません。"))?
-        .next_back()
-        .ok_or(anyhow::anyhow!("URLのパスが空です。"))?;
-    Ok(filename.to_owned())
-}
-
-/// 問題ディレクトリを作成する。
-fn create_directory(alpacahack_directory: &Path, downloaded_filename: &str) -> Result<PathBuf> {
-    // ファイル名の末尾の.tar.gzを削除したものをディレクトリ名とする。
-    let dirname = downloaded_filename.to_string().replace(".tar.gz", "");
-    let dir_path = alpacahack_directory.join(dirname);
-    fs::create_dir_all(&dir_path)?;
-
-    Ok(dir_path)
-}
-
-/// ディレクトリの中にファイルを展開する。
-fn expand_file(dir: &Path, downloaded_filename: &str, downloaded_data: &[u8]) -> Result<()> {
-    // ダウンロードしたファイルを保存する。
-    let downloaded_file_path = dir.join(downloaded_filename);
-    File::create(&downloaded_file_path)?.write_all(downloaded_data)?;
-    // ダウンロードしたファイルがtar.gzの場合、解凍する。
-    if downloaded_filename.ends_with(".tar.gz") {
-        let tar_gz = File::open(&downloaded_file_path)?;
-        let tar = flate2::read::GzDecoder::new(tar_gz);
-        let mut archive = tar::Archive::new(tar);
-        archive.unpack(dir)?;
-    }
-    // ダウンロードしたファイルを削除する。
-    fs::remove_file(&downloaded_file_path)?;
-    Ok(())
-}
-
 /// alpacahackディレクトリのパスを取得する。
 fn get_alpacahack_directory() -> Result<PathBuf> {
     let home_dir = dirs::home_dir().ok_or(anyhow::anyhow!(
@@ -156,7 +117,7 @@ fn get_alpacahack_directory() -> Result<PathBuf> {
 /// VSCodeで問題ディレクトリを開く。
 fn open_vscode(problem_dir: &Path) -> Result<()> {
     process::Command::new("code")
-        .arg(&problem_dir)
+        .arg(problem_dir)
         .spawn()?
         .wait()?;
     Ok(())
