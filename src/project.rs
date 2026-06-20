@@ -5,21 +5,32 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::problem_info::{ChallengeData, ChallengeInfo};
+use crate::challenge_info::{ChallengeData, ChallengeInfo};
 
-/// 問題プロジェクトを作成する。
+/// 与えたデータを基に問題プロジェクトを作成する。
+///
+/// # 引数
+/// - `alpacahack_dir`: ベースとなる作業ディレクトリの `Path`。
+/// - `challenge_info`: 問題の情報の。
+///
+/// # 動作
+/// 1. `file_url` から問題データを非同期で取得する（`fetch::fetch_problem_data` を呼ぶ）。
+/// 2. 取得した問題情報をもとに、`alpacahack` 配下に問題用プロジェクトを作成する。
+///
+/// # 返り値
+/// 作成した問題プロジェクトのディレクトリパス。
 pub(crate) fn create_project(
     alpacahack_dir: &Path,
-    problem_info: ChallengeInfo,
+    challenge_info: ChallengeInfo,
 ) -> Result<PathBuf> {
-    let challenge_dir = create_directory(alpacahack_dir, &problem_info.problem_name_with_kebab)
+    let challenge_dir = create_directory(alpacahack_dir, &challenge_info.problem_name_with_kebab)
         .context("問題ディレクトリの作成に失敗しました。")?;
     println!(
         "問題ディレクトリを作成しました: {}",
         challenge_dir.display()
     );
 
-    expand_file(&challenge_dir, problem_info.data).context("ファイルの展開に失敗しました。")?;
+    expand_file(&challenge_dir, challenge_info.data).context("ファイルの展開に失敗しました。")?;
     println!("ファイルの展開が完了しました。");
 
     // 問題ディレクトリにmemo.mdを作成する。

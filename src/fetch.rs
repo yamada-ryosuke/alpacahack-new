@@ -1,7 +1,7 @@
 use anyhow::Result;
 use reqwest::Url;
 
-use crate::problem_info::{ChallengeData, ChallengeInfo};
+use crate::challenge_info::{ChallengeData, ChallengeInfo};
 
 /// URLからデータを取得する。
 pub async fn fetch_problem_data(file_url: &Url) -> Result<ChallengeInfo> {

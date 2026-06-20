@@ -1,7 +1,7 @@
 /// 問題ページから問題の情報を取得する機能のモジュール
 mod fetch;
 /// 問題の情報を持つための構造体
-mod problem_info;
+mod challenge_info;
 /// 問題プロジェクトを作成する機能のモジュール
 mod project;
 
