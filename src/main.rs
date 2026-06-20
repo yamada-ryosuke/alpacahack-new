@@ -67,8 +67,7 @@ fn input_url() -> Result<Url> {
         .read_line(&mut url)
         .context("URLの入力に失敗しました")
         .unwrap();
-    let url = validate_domain(url.trim());
-    url
+    validate_domain(url.trim())
 }
 
 /// URLが https://alpacahack.com のものであることを確認する。

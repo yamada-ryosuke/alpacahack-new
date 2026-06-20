@@ -1,3 +1,6 @@
+/// 問題ページから取得したデータを解析する
+mod analyse;
+
 use anyhow::Result;
 use reqwest::Url;
 
@@ -28,52 +31,10 @@ pub fn fetch_challenge_data(challenge_url: &Url) -> Result<ChallengeInfo> {
 
 /// 問題ページから問題のメタデータを取得する。
 fn fetch_challenge_meta(challenge_url: &Url) -> Result<(ChallengeMeta, Option<Url>)> {
-    // challenge_urlからデータを取得してパースする
+    // challenge_urlからデータを取得する。
     let document = reqwest::blocking::get(challenge_url.as_str())?.text()?;
-    let document = scraper::Html::parse_document(&document);
-
-    // セレクタを作成する
-    // おそらく動的生成のため、セレクタが崩れやすい。
-    // そのため、`main > div > h1`程度のアバウトなセレクタを使う。
-    let name_with_space_selector = scraper::Selector::parse("main > div > h1").unwrap();
-    let file_url_selector =
-        scraper::Selector::parse("main > div > article > div > div > a").unwrap();
-    // 日付の上のp要素のセレクタ
-    let release_selector = scraper::Selector::parse("main > div > p").unwrap();
-
-    // データを取得する
-    let name_with_space = document
-        .select(&name_with_space_selector)
-        .next()
-        .unwrap()
-        .inner_html();
-    let file_url = document
-        .select(&file_url_selector)
-        .next()
-        .and_then(|elem| elem.attr("href"))
-        .map(|s| Url::parse(s).unwrap());
-
-    let date = document
-        .select(&release_selector)
-        .next()
-        .unwrap()
-        .last_child()
-        .unwrap()
-        .value()
-        .as_text()
-        .unwrap()
-        .to_string();
-
-    let name_with_kebab = get_name_with_kebab(challenge_url)?;
-    Ok((
-        ChallengeMeta {
-            url: challenge_url.clone(),
-            date,
-            name_with_space,
-            name_with_kebab,
-        },
-        file_url,
-    ))
+    // documentから情報を抽出する
+    analyse::analyze_document(challenge_url, &document)
 }
 
 /// ファイルをダウンロードする。
@@ -81,7 +42,7 @@ fn download_file(file_url: &Url) -> Result<bytes::Bytes> {
     Ok(reqwest::blocking::get(file_url.as_str())?.bytes()?)
 }
 
-/// URLからファイル名を取得する。
+/// ファイルのURLからファイル名を取得する。
 fn get_filename(file_url: &Url) -> Result<String> {
     let filename = file_url
         .path_segments()
@@ -89,14 +50,4 @@ fn get_filename(file_url: &Url) -> Result<String> {
         .next_back()
         .ok_or(anyhow::anyhow!("URLのパスが空です。"))?;
     Ok(filename.to_owned())
-}
-
-/// URLからkebab-caseの問題名を取得する。
-fn get_name_with_kebab(challenge_url: &Url) -> Result<String> {
-    let challenge_name = challenge_url
-        .path_segments()
-        .ok_or(anyhow::anyhow!("URLのパスがありません。"))?
-        .next_back()
-        .ok_or(anyhow::anyhow!("URLのパスが空です。"))?;
-    Ok(challenge_name.to_owned())
 }
