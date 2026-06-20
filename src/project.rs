@@ -32,8 +32,8 @@ pub(crate) fn create_project(
 
     if let Some(data) = challenge_info.data {
         expand_file(&challenge_dir, data).context("ファイルの展開に失敗しました。")?;
+        println!("ファイルの展開が完了しました。");
     }
-    println!("ファイルの展開が完了しました。");
 
     // 問題ディレクトリにmemo.mdを作成する。
     let memo_path = challenge_dir.join("memo.md");

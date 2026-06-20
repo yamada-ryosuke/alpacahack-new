@@ -15,12 +15,12 @@ use anyhow::{Context, Result};
 use reqwest::Url;
 
 fn main() -> Result<()> {
-    // ファイルのダウンロードURLを入力してもらう。
-    let file_url = input_url().context("不正なURLです。")?;
+    // 問題ページのURLを入力してもらう。
+    let challenge_url = input_url().context("不正なURLです。")?;
     // AlpacaHackのディレクトリ名を取得する。
     let alpacahack_directory = get_alpacahack_directory()?;
 
-    let challenge_dir = setup_challenge_project(&file_url, &alpacahack_directory)?;
+    let challenge_dir = setup_challenge_project(&challenge_url, &alpacahack_directory)?;
 
     // VSCodeでディレクトリを開く。
     open_vscode(&challenge_dir).context("VSCodeでディレクトリを開けませんでした。")?;
@@ -41,11 +41,11 @@ fn main() -> Result<()> {
 ///
 /// # 返り値
 /// 作成した問題プロジェクトのディレクトリパス。
-fn setup_challenge_project(file_url: &Url, alpacahack_directory: &Path) -> Result<PathBuf> {
+fn setup_challenge_project(challenge_url: &Url, alpacahack_directory: &Path) -> Result<PathBuf> {
     // 問題情報を取得する。
-    let challenge_info = fetch::fetch_challenge_data(file_url)?;
+    let challenge_info = fetch::fetch_challenge_data(challenge_url)?;
     println!("問題情報を取得しました");
-    println!("{:?}", challenge_info);
+    // println!("{:?}", challenge_info);
 
     // 問題プロジェクトを作成する。
     let challenge_dir = project::create_project(alpacahack_directory, challenge_info)?;
@@ -54,9 +54,9 @@ fn setup_challenge_project(file_url: &Url, alpacahack_directory: &Path) -> Resul
     Ok(challenge_dir)
 }
 
-/// URLを入力してもらう。
+/// 問題ページのURLを入力してもらう。
 fn input_url() -> Result<Url> {
-    print!("download url> ");
+    print!("問題ページのurl> ");
     io::stdout()
         .flush()
         .context("標準出力に失敗しました。")
@@ -71,13 +71,13 @@ fn input_url() -> Result<Url> {
     url
 }
 
-/// URLがalpacahack-prod.s3.ap-northeast-1.amazonaws.comのものであることを確認する。
+/// URLが https://alpacahack.com のものであることを確認する。
 fn validate_domain(url: &str) -> Result<Url> {
     let url = Url::parse(url)?;
     let domain = url
         .domain()
         .ok_or(anyhow::anyhow!("ドメイン名がありません。"))?;
-    if domain == "alpacahack-prod.s3.ap-northeast-1.amazonaws.com" {
+    if domain == "alpacahack.com" {
         Ok(url)
     } else {
         Err(anyhow::anyhow!("ドメイン名が正しくありません。"))
@@ -123,25 +123,25 @@ mod daily_alpacahack_test {
         setup_challenge_project(&challenge_url, dir.path()).unwrap();
 
         let expected = [
-            "emojify/emojify/backend",
-            "emojify/emojify/backend/index.js",
-            "emojify/emojify/backend/package-lock.json",
-            "emojify/emojify/backend/package.json",
-            "emojify/emojify/frontend",
-            "emojify/emojify/frontend/index.html",
-            "emojify/emojify/frontend/index.js",
-            "emojify/emojify/frontend/package-lock.json",
-            "emojify/emojify/frontend/package.json",
-            "emojify/emojify/secret",
-            "emojify/emojify/secret/index.js",
-            "emojify/emojify/secret/package-lock.json",
-            "emojify/emojify/secret/package.json",
-            "emojify/emojify/compose.yaml",
-            "emojify/emojify/Dockerfile",
-            "emojify/memo.md",
+            "emojify/backend",
+            "emojify/backend/index.js",
+            "emojify/backend/package-lock.json",
+            "emojify/backend/package.json",
+            "emojify/frontend",
+            "emojify/frontend/index.html",
+            "emojify/frontend/index.js",
+            "emojify/frontend/package-lock.json",
+            "emojify/frontend/package.json",
+            "emojify/secret",
+            "emojify/secret/index.js",
+            "emojify/secret/package-lock.json",
+            "emojify/secret/package.json",
+            "emojify/compose.yaml",
+            "emojify/Dockerfile",
+            "memo.md",
         ];
         for rel in expected {
-            assert_exists(dir.path(), rel);
+            assert_exists(&dir.path().join("emojify"), rel);
         }
     }
 
