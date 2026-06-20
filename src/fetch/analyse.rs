@@ -1,4 +1,5 @@
 use anyhow::Result;
+use chrono::NaiveDate;
 use reqwest::Url;
 use scraper::Html;
 
@@ -15,7 +16,7 @@ pub fn analyze_document(
     Ok((
         ChallengeMeta {
             url: challenge_url.clone(),
-            date: get_date(&document)?,
+            released_at: get_date(&document)?,
             title_with_space: get_name_with_space(&document)?,
             title_with_kebab: get_name_with_kebab(challenge_url)?,
         },
@@ -33,7 +34,9 @@ fn get_name_with_space(document: &Html) -> Result<String> {
     let parent = document
         .select(&name_with_space_selector)
         .next()
-        .ok_or(anyhow::anyhow!("問題タイトルのh1要素を取得できませんでした。"))?;
+        .ok_or(anyhow::anyhow!(
+            "問題タイトルのh1要素を取得できませんでした。"
+        ))?;
     // 名前を取得する
     Ok(parent.inner_html())
 }
@@ -59,7 +62,7 @@ fn get_file_url(document: &Html) -> Result<Option<Url>> {
 }
 
 /// 問題の日付を取得する
-fn get_date(document: &Html) -> Result<String> {
+fn get_date(document: &Html) -> Result<NaiveDate> {
     // 親要素のセレクタを作成する。
     let release_selector = scraper::Selector::parse("main > div > p").unwrap();
 
@@ -72,12 +75,18 @@ fn get_date(document: &Html) -> Result<String> {
         .last_child()
         .ok_or(anyhow::anyhow!("日付の要素を取得できませんでした。"))?
         .value();
-    Ok(date_elem
+    let date_string = date_elem
         .as_text()
         .ok_or(anyhow::anyhow!(
             "日付の要素をテキストに変換できませんでした。"
         ))?
-        .to_string())
+        .to_string();
+    convert_to_naive_date(&date_string)
+}
+
+fn convert_to_naive_date(date_string: &str) -> Result<NaiveDate> {
+    let date = NaiveDate::parse_from_str(date_string, "%b %e, %Y")?;
+    Ok(date)
 }
 
 /// URLからkebab-caseの問題タイトルを取得する。

@@ -4,7 +4,7 @@ mod analyse;
 use anyhow::Result;
 use reqwest::Url;
 
-use crate::challenge_info::{ChallengeData, ChallengeInfo, ChallengeMeta};
+use crate::challenge_info::{ChallengeFile, ChallengeInfo, ChallengeMeta};
 
 /// URLを基に問題に関するデータを取得する。
 pub fn fetch_challenge_data(challenge_url: &Url) -> Result<ChallengeInfo> {
@@ -12,14 +12,14 @@ pub fn fetch_challenge_data(challenge_url: &Url) -> Result<ChallengeInfo> {
     match file_url {
         None => Ok(ChallengeInfo {
             meta: metadata,
-            data: None,
+            attached: None,
         }),
         Some(file_url) => {
             let filename = get_filename(&file_url)?;
             let file_data = download_file(&file_url)?;
             Ok(ChallengeInfo {
                 meta: metadata,
-                data: Some(ChallengeData {
+                attached: Some(ChallengeFile {
                     url: file_url,
                     name: filename,
                     data: file_data,

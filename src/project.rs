@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::challenge_info::{ChallengeData, ChallengeInfo};
+use crate::challenge_info::{ChallengeFile, ChallengeInfo};
 
 /// 与えたデータを基に問題プロジェクトを作成する。
 ///
@@ -32,7 +32,7 @@ pub(crate) fn create_project(
     );
 
     // 問題に添付されているファイルを展開する。
-    if let Some(data) = challenge_info.data {
+    if let Some(data) = challenge_info.attached {
         expand_file(&challenge_dir, data).context("ファイルの展開に失敗しました。")?;
         println!("ファイルの展開が完了しました。");
     }
@@ -57,7 +57,7 @@ fn create_directory(alpacahack_dir: &Path, challenge_title: &str) -> Result<Path
 }
 
 /// ディレクトリの中にダウンロードしたファイルを展開する。
-fn expand_file(challenge_dir: &Path, downloaded_file: ChallengeData) -> Result<()> {
+fn expand_file(challenge_dir: &Path, downloaded_file: ChallengeFile) -> Result<()> {
     // ダウンロードしたファイルを保存する。
     let downloaded_file_path = challenge_dir.join(&downloaded_file.name);
     File::create(&downloaded_file_path)?.write_all(&downloaded_file.data)?;
