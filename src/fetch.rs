@@ -1,6 +1,21 @@
 use anyhow::Result;
 use reqwest::Url;
 
+use crate::problem_info::{ChallengeData, ChallengeInfo};
+
+/// URLからデータを取得する。
+pub async fn fetch_problem_data(file_url: &Url) -> Result<ChallengeInfo> {
+    let filename = get_filename(file_url)?;
+    let file_data = download(file_url).await?;
+    Ok(ChallengeInfo {
+        problem_name_with_kebab: filename.clone(),
+        data: ChallengeData {
+            name: filename,
+            data: file_data,
+        },
+    })
+}
+
 /// ファイルをダウンロードする。
 pub async fn download(url: &Url) -> Result<bytes::Bytes> {
     Ok(reqwest::get(url.as_str()).await?.bytes().await?)

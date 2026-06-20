@@ -1,8 +1,8 @@
 mod fetch;
+mod problem_info;
 mod project;
 
 use std::{
-    fs::File,
     io::{self, Write},
     path::{Path, PathBuf},
     process,
@@ -10,6 +10,8 @@ use std::{
 
 use anyhow::{Context, Result};
 use reqwest::Url;
+
+use crate::fetch::fetch_problem_data;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -45,32 +47,14 @@ async fn main() -> Result<()> {
 /// )
 /// ```
 async fn run(file_url: &Url, alpacahack_directory: &Path) -> Result<()> {
-    // ファイルをダウンロードする
-    let downloaded_data = fetch::download(file_url)
-        .await
-        .context("ファイルのダウンロードに失敗しました。")?;
-    println!("ダウンロードが完了しました。");
+    // 問題をダウンロードする。
+    let problem_info = fetch_problem_data(file_url).await?;
 
-    // URLからファイル名を取得する。
-    let downloaded_filename = fetch::get_filename(file_url).context("ファイル名の取得に失敗しました。")?;
-
-    // 問題ディレクトリを作成する。
-    let dir = project::create_directory(alpacahack_directory, &downloaded_filename)
-        .context("問題ディレクトリの作成に失敗しました。")?;
-    println!("問題ディレクトリを作成しました: {}", dir.display());
-
-    // 問題ディレクトリの中にファイルを展開する。
-    project::expand_file(&dir, &downloaded_filename, &downloaded_data)
-        .context("ファイルの展開に失敗しました。")?;
-    println!("ファイルの展開が完了しました。");
-
-    // 問題ディレクトリにmemo.mdを作成する。
-    let memo_path = dir.join("memo.md");
-    File::create(&memo_path).context("memo.mdの作成に失敗しました。")?;
-    println!("memo.mdを作成しました: {}", memo_path.display());
+    // 問題プロジェクトを作成する。
+    let problem_dir = project::create_project(alpacahack_directory, problem_info)?;
 
     // VSCodeでディレクトリを開く。
-    open_vscode(&dir).context("VSCodeでディレクトリを開けませんでした。")?;
+    open_vscode(&problem_dir).context("VSCodeでディレクトリを開けませんでした。")?;
     println!("VSCodeでディレクトリを開きました。");
 
     Ok(())
