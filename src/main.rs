@@ -115,12 +115,12 @@ mod daily_alpacahack_test {
     /// 問題名とファイル名が一致しているパターン
     #[tokio::test]
     async fn test_emojify_matching() {
-        let _problem_url = Url::parse("https://alpacahack.com/daily/challenges/emojify").unwrap();
-        let file_url = Url::parse("https://alpacahack-prod.s3.ap-northeast-1.amazonaws.com/5bad030b-a894-4111-900d-43332caf6bf6/emojify.tar.gz").unwrap();
+        let problem_url = Url::parse("https://alpacahack.com/daily/challenges/emojify").unwrap();
+        let _file_url = Url::parse("https://alpacahack-prod.s3.ap-northeast-1.amazonaws.com/5bad030b-a894-4111-900d-43332caf6bf6/emojify.tar.gz").unwrap();
 
         let dir = tempdir().unwrap();
 
-        setup_problem_project(&file_url, dir.path()).await.unwrap();
+        setup_problem_project(&problem_url, dir.path()).await.unwrap();
 
         let expected = [
             "emojify/emojify/backend",
