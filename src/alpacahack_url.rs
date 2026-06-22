@@ -124,20 +124,20 @@ mod tests {
 
     #[test]
     fn test_project_name_with_numbers() {
-        let url = AlpacaHackUrl::new("https://alpacahack.com/daily/challenges/problem-123").unwrap();
-        assert_eq!(url.project_name(), "problem-123");
+        let url = AlpacaHackUrl::new("https://alpacahack.com/daily/challenges/small-e").unwrap();
+        assert_eq!(url.project_name(), "small-e");
     }
 
     #[test]
     fn test_project_name_single_word() {
-        let url = AlpacaHackUrl::new("https://alpacahack.com/daily/challenges/test").unwrap();
-        assert_eq!(url.project_name(), "test");
+        let url = AlpacaHackUrl::new("https://alpacahack.com/daily/challenges/message-for-you?month=2026-04").unwrap();
+        assert_eq!(url.project_name(), "message-for-you");
     }
 
     // ==================== new() の正常系テスト ====================
     #[test]
     fn test_new_valid_url() {
-        let result = AlpacaHackUrl::new("https://alpacahack.com/daily/challenges/my-challenge");
+        let result = AlpacaHackUrl::new("https://alpacahack.com/daily/challenges/vm1");
         assert!(result.is_ok());
     }
 
@@ -145,7 +145,7 @@ mod tests {
     #[test]
     fn test_new_normalizes_query_and_fragment() {
         let url = AlpacaHackUrl::new(
-            "https://alpacahack.com/daily/challenges/test-challenge?param=value#section",
+            "https://alpacahack.com/daily/challenges/alpaca-rangers-2?month=2026-05#section",
         )
         .unwrap();
         
@@ -154,28 +154,28 @@ mod tests {
         assert_eq!(url.fragment(), None);
         assert_eq!(
             url.as_str(),
-            "https://alpacahack.com/daily/challenges/test-challenge"
+            "https://alpacahack.com/daily/challenges/alpaca-rangers-2"
         );
     }
 
     /// クエリパラメータだけが付いているURLを正規化できることを確認するテスト
     #[test]
     fn test_new_normalizes_query_only() {
-        let url = AlpacaHackUrl::new("https://alpacahack.com/daily/challenges/test?a=1&b=2").unwrap();
+        let url = AlpacaHackUrl::new("https://alpacahack.com/daily/challenges/small-n?month=2026-05&b=2").unwrap();
         assert_eq!(url.query(), None);
     }
 
     /// フラグメントだけが付いているURLを正規化できることを確認するテスト
     #[test]
     fn test_new_normalizes_fragment_only() {
-        let url = AlpacaHackUrl::new("https://alpacahack.com/daily/challenges/test#top").unwrap();
+        let url = AlpacaHackUrl::new("https://alpacahack.com/daily/challenges/func-array#top").unwrap();
         assert_eq!(url.fragment(), None);
     }
 
     // ==================== scheme のバリデーションテスト ====================
     #[test]
     fn test_new_rejects_http_scheme() {
-        let result = AlpacaHackUrl::new("http://alpacahack.com/daily/challenges/test");
+        let result = AlpacaHackUrl::new("http://alpacahack.com/daily/challenges/alpaca-plus-plus");
         assert!(result.is_err());
         assert!(result
             .unwrap_err()
@@ -185,14 +185,14 @@ mod tests {
 
     #[test]
     fn test_new_rejects_ftp_scheme() {
-        let result = AlpacaHackUrl::new("ftp://alpacahack.com/daily/challenges/test");
+        let result = AlpacaHackUrl::new("ftp://alpacahack.com/daily/challenges/alpaca-plus-plus");
         assert!(result.is_err());
     }
 
     // ==================== domain のバリデーションテスト ====================
     #[test]
     fn test_new_rejects_wrong_domain() {
-        let result = AlpacaHackUrl::new("https://example.com/daily/challenges/test");
+        let result = AlpacaHackUrl::new("https://example.com/daily/challenges/alpaca-plus-plus");
         assert!(result.is_err());
         assert!(result
             .unwrap_err()
@@ -202,7 +202,7 @@ mod tests {
 
     #[test]
     fn test_new_rejects_subdomain() {
-        let result = AlpacaHackUrl::new("https://api.alpacahack.com/daily/challenges/test");
+        let result = AlpacaHackUrl::new("https://api.alpacahack.com/daily/challenges/alpaca-plus-plus");
         assert!(result.is_err());
     }
 
@@ -225,13 +225,13 @@ mod tests {
 
     #[test]
     fn test_new_rejects_path_with_trailing_slash() {
-        let result = AlpacaHackUrl::new("https://alpacahack.com/daily/challenges/test/");
+        let result = AlpacaHackUrl::new("https://alpacahack.com/daily/challenges/alpaca-plus-plus/");
         assert!(result.is_err());
     }
 
     #[test]
     fn test_new_rejects_extra_path_segments() {
-        let result = AlpacaHackUrl::new("https://alpacahack.com/daily/challenges/test/extra");
+        let result = AlpacaHackUrl::new("https://alpacahack.com/daily/challenges/alpaca-plus-plus/extra");
         assert!(result.is_err());
     }
 
