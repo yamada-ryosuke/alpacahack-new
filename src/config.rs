@@ -12,7 +12,7 @@ pub struct Config {
 }
 
 /// 設定を取得する。
-pub fn get(alpacahack_new: ProjectDirs) -> Result<Config> {
+pub fn load(alpacahack_new: ProjectDirs) -> Result<Config> {
     let config_path = alpacahack_new.config_local_dir().join("config.toml");
     ensure!(config_path.exists(), "設定ファイルが存在しません。");
     let config_data = fs::read_to_string(config_path).context("設定ファイルが読み込めませんでした。")?;
