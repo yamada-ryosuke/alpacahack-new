@@ -2,6 +2,8 @@
 mod alpacahack_url;
 /// 問題の情報を持つための構造体
 mod challenge_info;
+/// 設定ファイルを取り扱うモジュール
+mod config;
 /// 問題ページから問題の情報を取得する機能のモジュール
 mod fetch;
 /// ユビキタス言語っぽいやつ
@@ -16,22 +18,25 @@ use std::{
 };
 
 use anyhow::{Context, Result};
+use directories::ProjectDirs;
 
 use crate::prelude::*;
 
-fn main() -> Result<()> {
-    // 問題ページのURLを入力してもらう。
-    let challenge_url = input_url().context("不正なURLです。")?;
-    // AlpacaHackのディレクトリ名を取得する。
-    let alpacahack_directory = get_alpacahack_directory()?;
+fn main() {
+    // alpacahack-newのプロジェクトディレクトリを取得する。
+    let alpacahack_new = ProjectDirs::from("", "", "alpacahack-new")
+        .expect("alpacahack-newのプロジェクトディレクトリを取得できませんでした。");
+    let config = config::get(alpacahack_new).expect("設定を取得できませんでした。");
 
-    let challenge_dir = setup_challenge_project(&challenge_url, &alpacahack_directory)?;
+    // 問題ページのURLを入力してもらう。
+    let challenge_url = input_url().context("不正なURLです。").unwrap();
+
+    let challenge_dir = setup_challenge_project(&challenge_url, &config.alpacahack_dir).unwrap();
 
     // VSCodeでディレクトリを開く。
-    open_vscode(&challenge_dir).context("VSCodeでディレクトリを開けませんでした。")?;
+    open_vscode(&challenge_dir).context("VSCodeでディレクトリを開けませんでした。").unwrap();
     println!("VSCodeでディレクトリを開きました。");
 
-    Ok(())
 }
 
 /// 指定した URL から問題データを取得し、作業ディレクトリに問題プロジェクトを作成する。
